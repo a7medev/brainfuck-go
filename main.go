@@ -20,28 +20,33 @@ func main() {
 		os.Exit(1)
 	}
 
+	p := NewParser(string(contents))
+	nodes := p.Parse(0, 0)
+
+	if p.Error != nil {
+		fmt.Println(p.Error)
+	}
+
 	memory := [30000]byte{}
 	ptr := 0
-
-	Execute(string(contents), memory, ptr)
+	Execute(nodes, &memory, &ptr)
 }
 
-func Execute(contents string, memory [30000]uint8, ptr int) {
+func Execute(nodes []Node, memory *[30000]uint8, ptr *int) {
 	reader := bufio.NewReader(os.Stdin)
-
-	for _, c := range contents {
-		switch c {
-		case '+':
-			memory[ptr]++
-		case '-':
-			memory[ptr]--
-		case '<':
-			ptr++
-		case '>':
-			ptr--
-		case '.':
-			fmt.Printf("%c", memory[ptr])
-		case ',':
+	for _, node := range nodes {
+		switch node.Type {
+		case AddNode:
+			memory[*ptr]++
+		case SubNode:
+			memory[*ptr]--
+		case MoveRightNode:
+			*ptr++
+		case MoveLeftNode:
+			*ptr--
+		case OutputNode:
+			fmt.Printf("%c", memory[*ptr])
+		case InputNode:
 			result, err := reader.ReadByte()
 
 			if err != nil {
@@ -49,7 +54,11 @@ func Execute(contents string, memory [30000]uint8, ptr int) {
 				os.Exit(1)
 			}
 
-			memory[ptr] = result
+			memory[*ptr] = result
+		case LoopNode:
+			for memory[*ptr] != 0 {
+				Execute(node.Children, memory, ptr)
+			}
 		}
 	}
 }
